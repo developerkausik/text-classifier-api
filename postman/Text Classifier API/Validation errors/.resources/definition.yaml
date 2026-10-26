@@ -1,3 +1,0 @@
-$kind: collection
-description: Requests the API must reject with 422 before calling any model.
-order: 2000
