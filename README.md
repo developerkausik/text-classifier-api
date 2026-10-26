@@ -12,7 +12,7 @@ A Laravel REST API with one endpoint. You send it a piece of customer text; it a
 ## Setup
 
 ```bash
-git clone <repo-url> text-classifier-api
+git clone https://github.com/developerkausik/text-classifier-api.git
 cd text-classifier-api
 composer install
 cp .env.example .env
@@ -24,7 +24,7 @@ Then set the AI options in `.env`:
 | Variable | Default | Purpose |
 |---|---|---|
 | `AI_DRIVER` | `claude` | `claude` calls the Anthropic API. `ollama` runs a local model, free and offline. `fake` returns a canned answer without calling any model. |
-| `ANTHROPIC_API_KEY` | (empty) | Your key from [console.anthropic.com](https://console.anthropic.com). Required when `AI_DRIVER=claude`. |
+| `ANTHROPIC_API_KEY` | (empty) | Your Claude API key, starting with `sk-ant-`. Required when `AI_DRIVER=claude`. See [Getting an API key](#getting-an-api-key). |
 | `AI_MODEL` | `claude-opus-5-5` | Any Claude model ID. |
 | `AI_EFFORT` | `low` | How much the model reasons before answering (`low`, `medium`, `high`). `low` is enough for classification and keeps it fast. |
 | `AI_MAX_TOKENS` | `2048` | Output token limit per request. |
@@ -34,12 +34,22 @@ Then set the AI options in `.env`:
 | `OLLAMA_MODEL` | `llama3.2` | Any model you have pulled in Ollama. |
 | `OLLAMA_TIMEOUT` | `120` | Seconds to wait. Local models are slower, especially on the first call while the model loads. |
 
+### Getting an API key
+
+1. Sign in to the Claude Console and open [platform.claude.com/settings/keys](https://platform.claude.com/settings/keys). This is separate from claude.ai, and a claude.ai subscription does not include API usage.
+2. Click **Create key**. Set **Linked account** to yourself, and select a **workspace** (for example Default). A key without a workspace needs an extra header this project does not send.
+3. Add credits under **Settings → Billing**. Each request costs roughly $0.005–0.02 with the default model.
+4. Copy the key (it is shown only once) into `ANTHROPIC_API_KEY` in `.env`.
+
 ### Running without an API key (Ollama)
 
 1. Install [Ollama](https://ollama.com/download) and download a model: `ollama pull llama3.2`
 2. In `.env`, set `AI_DRIVER=ollama`.
 
-Nothing else changes: the same prompt and JSON schema are sent to the local model. A small local model is less accurate than Claude on borderline messages, so use it to try the API for free, not as a measure of quality.
+Nothing else changes: the same prompt and JSON schema are sent to the local model.
+
+- **First request.** It loads the model into memory and can take a minute or two; it may even hit `OLLAMA_TIMEOUT` and return a 504. After that, requests take about a second on a laptop GPU.
+- **Accuracy.** A small model like llama3.2 (3B) is less accurate than Claude on borderline messages. Use it to try the API for free, not as a measure of quality. A larger model such as `qwen2.5:7b` is more accurate if your machine can run it; set `OLLAMA_MODEL` to match.
 
 Run it:
 
@@ -69,7 +79,7 @@ curl -X POST http://127.0.0.1:8000/api/classify \
   -d '{"text": "My order arrived broken and nobody answers my calls."}'
 ```
 
-**Response `200 OK`**
+**Example response `200 OK`**
 
 ```json
 {
@@ -112,7 +122,16 @@ Every error is JSON with a `message`. AI failures also carry an `error` code.
 - **Validation errors:** requests that must return 422.
 - **Diagnostics:** checks that the API is up, and that Ollama is running and has the model.
 
-Each request has automatic checks: the response shape, a confidence score that matches its level, and the expected status and category. Import the file into Postman, or run it from the command line:
+Each request has automatic checks: the response shape, a confidence score that matches its level, and the expected status and category.
+
+**In Postman:**
+1. Click **Import** and select the `.json` file.
+2. If the API is not on port 8000, change the collection's `baseUrl` variable.
+3. Send a request and see the **Test Results** tab, or use **Run collection** to run them all.
+
+Import into a regular workspace. A workspace linked to a local folder converts the file into its own YAML format and removes the `.json`.
+
+**From the command line** (needs Node.js):
 
 ```bash
 npx newman run postman/text-classifier-api.postman_collection.json
