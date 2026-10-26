@@ -24,7 +24,7 @@ class AiServiceException extends RuntimeException
 
     public static function notConfigured(): self
     {
-        return new self('AI service is not configured. Set ANTHROPIC_API_KEY or use AI_DRIVER=fake.', 'ai_not_configured', 503);
+        return new self('AI service is not configured. Set ANTHROPIC_API_KEY, or use AI_DRIVER=ollama to run a local model.', 'ai_not_configured', 503);
     }
 
     public static function timeout(Throwable $previous): self

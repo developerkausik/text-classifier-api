@@ -7,13 +7,13 @@ return [
     | AI Driver
     |--------------------------------------------------------------------------
     |
-    | "claude" calls the Anthropic API. "ollama" runs a local model through
-    | Ollama, free and offline. "fake" returns a canned response so the API can
-    | be run and tested without any model.
+    | "ollama" (default) runs a local model through Ollama, free and offline.
+    | "claude" calls the Anthropic API and needs ANTHROPIC_API_KEY. "fake"
+    | returns a canned response so the API can be run without any model.
     |
     */
 
-    'driver' => env('AI_DRIVER', 'claude'),
+    'driver' => env('AI_DRIVER', 'ollama'),
 
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY'),
