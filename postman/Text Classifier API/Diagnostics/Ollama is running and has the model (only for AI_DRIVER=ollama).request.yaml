@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{ollamaBaseUrl}}/api/tags"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Ollama answers', () => pm.response.to.have.status(200));
+      pm.test('Model ' + pm.variables.get('ollamaModel') + ' is installed (else run: ollama pull <model>)', () => {
+          const wanted = pm.variables.get('ollamaModel');
+          const names = pm.response.json().models.map(m => m.name);
+          pm.expect(names.some(n => n === wanted || n.startsWith(wanted + ':'))).to.be.true;
+      });
+    language: text/javascript
+order: 2000

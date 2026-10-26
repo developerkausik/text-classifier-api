@@ -23,13 +23,23 @@ Then set the AI options in `.env`:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AI_DRIVER` | `claude` | `claude` calls the Anthropic API. `fake` returns a canned answer, so you can run the API without a key. |
+| `AI_DRIVER` | `claude` | `claude` calls the Anthropic API. `ollama` runs a local model, free and offline. `fake` returns a canned answer without calling any model. |
 | `ANTHROPIC_API_KEY` | (empty) | Your key from [console.anthropic.com](https://console.anthropic.com). Required when `AI_DRIVER=claude`. |
 | `AI_MODEL` | `claude-opus-5-5` | Any Claude model ID. |
 | `AI_EFFORT` | `low` | How much the model reasons before answering (`low`, `medium`, `high`). `low` is enough for classification and keeps it fast. |
 | `AI_MAX_TOKENS` | `2048` | Output token limit per request. |
 | `AI_TIMEOUT` | `30` | Seconds before an AI request is abandoned. |
 | `AI_MAX_RETRIES` | `2` | The SDK retries rate limits, timeouts and 5xx errors this many times. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address. Used when `AI_DRIVER=ollama`. |
+| `OLLAMA_MODEL` | `llama3.2` | Any model you have pulled in Ollama. |
+| `OLLAMA_TIMEOUT` | `120` | Seconds to wait. Local models are slower, especially on the first call while the model loads. |
+
+### Running without an API key (Ollama)
+
+1. Install [Ollama](https://ollama.com/download) and download a model: `ollama pull llama3.2`
+2. In `.env`, set `AI_DRIVER=ollama`.
+
+Nothing else changes: the same prompt and JSON schema are sent to the local model. A small local model is less accurate than Claude on borderline messages, so use it to try the API for free, not as a measure of quality.
 
 Run it:
 
@@ -91,11 +101,24 @@ Every error is JSON with a `message`. AI failures also carry an `error` code.
 |---|---|---|
 | 422 | `text` missing, too short, too long or not a string | `{"message": "The text field is required.", "errors": {"text": ["The text field is required."]}}` |
 | 429 | More than 30 requests per minute from one client | `{"message": "Too Many Attempts."}` |
-| 502 | The AI provider returned an error, or a response that could not be used | `{"message": "AI service returned an error.", "error": "ai_error"}` |
+| 502 | The AI provider returned an error or an unusable response, Ollama is not running, or the Ollama model is not installed | `{"message": "AI service returned an error.", "error": "ai_error"}` |
 | 503 | The AI provider is rate-limiting us (sends `Retry-After`), or no API key is configured | `{"message": "AI service is rate limited. Try again shortly.", "error": "ai_rate_limited"}` |
 | 504 | The AI provider did not answer within `AI_TIMEOUT` | `{"message": "AI service timed out.", "error": "ai_timeout"}` |
 
-A Postman collection with these cases is in [`postman/text-classifier-api.postman_collection.json`](postman/text-classifier-api.postman_collection.json).
+### Postman collection
+
+[`postman/text-classifier-api.postman_collection.json`](postman/text-classifier-api.postman_collection.json) has three folders:
+- **Classify:** one example per category, plus a prompt-injection attempt.
+- **Validation errors:** requests that must return 422.
+- **Diagnostics:** checks that the API is up, and that Ollama is running and has the model.
+
+Each request has automatic checks: the response shape, a confidence score that matches its level, and the expected status and category. Import the file into Postman, or run it from the command line:
+
+```bash
+npx newman run postman/text-classifier-api.postman_collection.json
+```
+
+The expected-category checks depend on the model. With a small local model, a borderline example can fail; for instance, llama3.2 labels "Happy Diwali to the whole team!" as Feedback instead of Other.
 
 ## How AI was used
 
@@ -150,13 +173,14 @@ app/
     ├── Classification.php                  Result object
     └── Ai/
         ├── ClaudeClient.php                Anthropic SDK implementation
+        ├── OllamaClient.php                Local model through Ollama's HTTP API
         ├── FakeAiClient.php                Offline implementation for tests and demos
         └── AiResult.php
 config/ai.php                               AI settings, read from .env
 routes/api.php                              POST /api/classify
 ```
 
-The controller only validates input and returns JSON. The service holds the logic and depends on the `AiClient` interface, not on Anthropic directly, so the provider can be swapped or faked without touching the service.
+The controller only validates input and returns JSON. The service holds the logic and depends on the `AiClient` interface, not on Anthropic directly. That is how the Ollama driver was added: one new class and one line in `AppServiceProvider`, with no change to the service, controller or prompt.
 
 ## Tests
 
@@ -170,4 +194,5 @@ The tests use the fake driver, so they never call the real API and need no key. 
 - validation errors;
 - JSON errors without an `Accept` header;
 - timeout (504), rate limit (503 with `Retry-After`) and missing key (503);
-- the confidence mapping.
+- the confidence mapping;
+- the Ollama driver against faked HTTP responses: request body, reply parsing, Ollama not running, timeout, missing model and invalid JSON.

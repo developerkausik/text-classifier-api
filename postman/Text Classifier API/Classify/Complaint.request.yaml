@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/classify"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "text": "My order arrived broken and nobody answers my calls."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200', () => pm.response.to.have.status(200));
+      pm.test('Classified as Complaint', () => pm.expect(pm.response.json().category).to.eql('Complaint'));
+    language: text/javascript
+order: 1000

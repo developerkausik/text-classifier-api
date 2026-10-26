@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/classify"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "text": "The new checkout page is much faster. Great job!"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200', () => pm.response.to.have.status(200));
+      pm.test('Classified as Feedback', () => pm.expect(pm.response.json().category).to.eql('Feedback'));
+    language: text/javascript
+order: 3000

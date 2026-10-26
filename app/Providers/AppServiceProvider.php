@@ -8,6 +8,7 @@ use App\Contracts\AiClient;
 use App\Exceptions\AiServiceException;
 use App\Services\Ai\ClaudeClient;
 use App\Services\Ai\FakeAiClient;
+use App\Services\Ai\OllamaClient;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 
@@ -24,7 +25,12 @@ class AppServiceProvider extends ServiceProvider
             return match ($driver) {
                 'fake' => new FakeAiClient,
                 'claude' => $this->makeClaudeClient(config('ai.anthropic')),
-                default => throw new InvalidArgumentException("Unknown AI_DRIVER [{$driver}]. Use \"claude\" or \"fake\"."),
+                'ollama' => new OllamaClient(
+                    config('ai.ollama.base_url'),
+                    config('ai.ollama.model'),
+                    config('ai.ollama.timeout'),
+                ),
+                default => throw new InvalidArgumentException("Unknown AI_DRIVER [{$driver}]. Use \"claude\", \"ollama\" or \"fake\"."),
             };
         });
     }

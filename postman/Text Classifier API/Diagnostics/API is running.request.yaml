@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200', () => pm.response.to.have.status(200));
+      pm.test('Lists the classify endpoint', () => pm.expect(pm.response.json().endpoints).to.include('POST /api/classify'));
+    language: text/javascript
+order: 1000

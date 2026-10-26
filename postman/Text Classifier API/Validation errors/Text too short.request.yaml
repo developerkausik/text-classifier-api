@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/classify"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "text": "hi"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 422', () => pm.response.to.have.status(422));
+      pm.test('Error is on the text field', () => pm.expect(pm.response.json().errors).to.have.property('text'));
+    language: text/javascript
+order: 2000

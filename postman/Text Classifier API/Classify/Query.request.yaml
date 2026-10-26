@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/api/classify"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "text": "Do you deliver to Kolkata, and how long does it take?"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200', () => pm.response.to.have.status(200));
+      pm.test('Classified as Query', () => pm.expect(pm.response.json().category).to.eql('Query'));
+    language: text/javascript
+order: 2000
